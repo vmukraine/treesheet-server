@@ -1,0 +1,36 @@
+*Spring Boot All-In-One Demo*
+
+This project demonstrates a single Spring Boot application that functions as:
+
+1. An HTTPS REST API Server.
+2. A WebSocket Server.
+3. A Static File Web Server.
+
+*Important: Generating the SSL Certificate*
+
+Because this application is configured to run on HTTPS (server.ssl.enabled=true in application.properties), you must generate a self-signed certificate before running the app.
+
+Open your terminal, navigate to the project root, and run this command:
+
+keytool -genkeypair -alias tomcat -keyalg RSA -keysize 2048 -storetype PKCS12 -keystore src/main/resources/keystore.p12 -validity 3650 -storepass changeit
+
+
+Note: If you do not have keytool installed, it is part of the standard Java Development Kit (JDK).
+
+
+*How to Run*
+
+1. Build the project:
+
+  mvn clean install
+
+2. Run the application:
+
+  mvn spring-boot:run
+
+
+3. Access the application:
+  Open your browser and navigate to:
+    https://localhost:8443
+
+  Note: Since the certificate is self-signed, your browser will warn you about "Potential Security Risk". You must accept/proceed through the warning to see the page.

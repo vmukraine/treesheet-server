@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Java <-> JS String Transfer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .custom-scrollbar::-webkit-scrollbar { width: 8px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #1f2937; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 4px; }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-100 min-h-screen font-sans p-6">
+
+    <div class="max-w-4xl mx-auto space-y-6">
+        <!-- Header -->
+        <div class="flex justify-between items-center border-b border-gray-700 pb-4">
+            <div>
+                <h1 class="text-3xl font-bold text-blue-400">WebRTC List Transfer</h1>
+                <p class="text-gray-400">Java Client <-> Web Client</p>
+            </div>
+            <div id="status" class="px-3 py-1 rounded-full text-sm font-semibold bg-red-900 text-red-200">
+                Disconnected
+            </div>
+        </div>
+
+        <!-- Connection Controls -->
+        <div class="bg-gray-800 p-6 rounded-lg shadow-lg border border-gray-700">
+            <h2 class="text-xl font-semibold mb-4">Connection</h2>
+            <div class="flex gap-4">
+                <button onclick="startConnection()" class="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2 rounded transition">
+                    Connect (Send Offer)
+                </button>
+            </div>
+            <p class="text-sm text-gray-500 mt-2">Make sure the Java client and Signaling Server are running first.</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Sender -->
+            <div class="bg-gray-800 p-6 rounded-lg shadow-lg border border-gray-700">
+                <h2 class="text-xl font-semibold mb-4 flex items-center gap-2">
+                    <svg class="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
+                    Send List
+                </h2>
+                <div class="space-y-3">
+                    <label class="block text-sm text-gray-400">Add strings to list:</label>
+                    <div class="flex gap-2">
+                        <input type="text" id="strInput" class="flex-1 bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white focus:outline-none focus:border-blue-500" placeholder="e.g. ServerConfig">
+                        <button onclick="addString()" class="bg-gray-600 hover:bg-gray-500 text-white px-4 py-2 rounded">Add</button>
+                    </div>
+                    
+                    <div class="bg-gray-900 p-3 rounded h-32 overflow-y-auto border border-gray-700 custom-scrollbar">
+                        <ul id="pendingList" class="space-y-1 text-sm"></ul>
+                    </div>
+                    
+                    <button onclick="sendList()" id="sendBtn" disabled class="w-full bg-green-600 hover:bg-green-500 disabled:bg-gray-600 disabled:cursor-not-allowed text-white px-4 py-2 rounded transition font-semibold">
+                        Send List to Java
+                    </button>
+                </div>
+            </div>
+
+            <!-- Receiver -->
+            <div class="bg-gray-800 p-6 rounded-lg shadow-lg border border-gray-700">
+                <h2 class="text-xl font-semibold mb-4 flex items-center gap-2">
+                    <svg class="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                    Received Lists
+                </h2>
+                <div id="receivedLog" class="bg-gray-900 p-4 rounded h-64 overflow-y-auto border border-gray-700 font-mono text-sm custom-scrollbar space-y-4">
+                    <p class="text-gray-500 italic">Waiting for data...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const signalingUrl = 'ws://localhost:8080';
+        let ws;
+        let peerConnection;
+        let dataChannel;
+        let pendingStrings = [];
+
+        const config = {
+            iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+        };
+
+        function updateStatus(msg, type) {
+            const el = document.getElementById('status');
+            el.innerText = msg;
+            if(type === 'success') el.className = "px-3 py-1 rounded-full text-sm font-semibold bg-green-900 text-green-200";
+            else if(type === 'wait') el.className = "px-3 py-1 rounded-full text-sm font-semibold bg-yellow-900 text-yellow-200";
+            else el.className = "px-3 py-1 rounded-full text-sm font-semibold bg-red-900 text-red-200";
+        }
+
+        function startConnection() {
+            updateStatus('Connecting to Signaling...', 'wait');
+            ws = new WebSocket(signalingUrl);
+
+            ws.onopen = () => {
+                console.log('Connected to signaling server');
+                initWebRTC();
+            };
+
+            ws.onmessage = async (event) => {
+                const message = JSON.parse(event.data);
+                if (!peerConnection) initWebRTC();
+
+                if (message.type === 'answer') {
+                    console.log('Received Answer');
+                    await peerConnection.setRemoteDescription(new RTCSessionDescription(message));
+                } else if (message.type === 'candidate') {
+                    if(message.candidate) {
+                        try {
+                            await peerConnection.addIceCandidate(message);
+                        } catch (e) {
+                            console.error('Error adding received ice candidate', e);
+                        }
+                    }
+                }
+            };
+        }
+
+        async function initWebRTC() {
+            peerConnection = new RTCPeerConnection(config);
+
+            // 1. Create Data Channel (We are the initiator here)
+            dataChannel = peerConnection.createDataChannel("stringChannel");
+            setupDataChannel(dataChannel);
+
+            // 2. ICE Candidates
+            peerConnection.onicecandidate = (event) => {
+                if (event.candidate) {
+                    ws.send(JSON.stringify({
+                        type: 'candidate',
+                        candidate: event.candidate.candidate,
+                        sdpMid: event.candidate.sdpMid,
+                        sdpMLineIndex: event.candidate.sdpMLineIndex
+                    }));
+                }
+            };
+
+            // 3. Create Offer
+            const offer = await peerConnection.createOffer();
+            await peerConnection.setLocalDescription(offer);
+            ws.send(JSON.stringify({ type: 'offer', sdp: offer.sdp }));
+            console.log('Sent Offer');
+            updateStatus('Offer Sent - Waiting for Java...', 'wait');
+        }
+
+        function setupDataChannel(dc) {
+            dc.onopen = () => {
+                updateStatus('Connected via WebRTC', 'success');
+                document.getElementById('sendBtn').disabled = false;
+            };
+            
+            dc.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                displayReceivedList(data);
+            };
+        }
+
+        // --- UI Logic ---
+
+        function addString() {
+            const input = document.getElementById('strInput');
+            if(!input.value.trim()) return;
+            pendingStrings.push(input.value.trim());
+            renderPending();
+            input.value = '';
+        }
+
+        function renderPending() {
+            const list = document.getElementById('pendingList');
+            list.innerHTML = pendingStrings.map((s, i) => 
+                `<li class="flex justify-between bg-gray-700 px-2 py-1 rounded">
+                    <span>${s}</span>
+                    <button onclick="removeString(${i})" class="text-red-400 hover:text-red-300">×</button>
+                </li>`
+            ).join('');
+        }
+
+        function removeString(index) {
+            pendingStrings.splice(index, 1);
+            renderPending();
+        }
+
+        function sendList() {
+            if (dataChannel && dataChannel.readyState === 'open') {
+                const payload = JSON.stringify(pendingStrings);
+                dataChannel.send(payload);
+                
+                // Add to log as "Sent"
+                const log = document.getElementById('receivedLog');
+                const div = document.createElement('div');
+                div.className = "border-l-2 border-green-500 pl-3";
+                div.innerHTML = `<span class="text-green-400 font-bold">Sent:</span> <span class="text-gray-300 break-all">${payload}</span>`;
+                log.prepend(div);
+                
+                pendingStrings = [];
+                renderPending();
+            }
+        }
+
+        function displayReceivedList(list) {
+            const log = document.getElementById('receivedLog');
+            // Remove "waiting" text if exists
+            if(log.querySelector('.italic')) log.innerHTML = '';
+
+            const div = document.createElement('div');
+            div.className = "border-l-2 border-blue-500 pl-3 bg-gray-800/50 p-2 rounded";
+            
+            const listHtml = Array.isArray(list) 
+                ? list.map(item => `<span class="inline-block bg-blue-900/50 text-blue-200 px-2 py-0.5 rounded text-xs mr-1 mb-1">${item}</span>`).join('')
+                : `<span class="text-red-400">Invalid Data Format</span>`;
+
+            div.innerHTML = `
+                <div class="text-blue-400 font-bold text-xs mb-1">Received from Java:</div>
+                <div class="flex flex-wrap">${listHtml}</div>
+            `;
+            log.prepend(div);
+        }
+    </script>
+</body>
+</html>

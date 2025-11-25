@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spring Boot All-in-One Demo</title>
+    <style>
+        body { font-family: sans-serif; max-width: 800px; margin: 2rem auto; padding: 0 1rem; line-height: 1.6; }
+        .section { border: 1px solid #ccc; padding: 1.5rem; border-radius: 8px; margin-bottom: 2rem; }
+        .log-box { background: #f4f4f4; border: 1px solid #ddd; height: 150px; overflow-y: scroll; padding: 10px; margin-top: 10px; font-family: monospace; }
+        button { cursor: pointer; padding: 8px 16px; background: #007bff; color: white; border: none; border-radius: 4px; }
+        button:hover { background: #0056b3; }
+        input { padding: 8px; width: 60%; }
+        h2 { margin-top: 0; }
+    </style>
+</head>
+<body>
+
+    <h1>Spring Boot: HTTPS, Static & WebSockets</h1>
+    <p>This page is being served statically by the Spring Boot application.</p>
+
+    <!-- REST API SECTION -->
+    <div class="section">
+        <h2>1. HTTPS REST API</h2>
+        <p>Call the internal API via HTTPS.</p>
+        <button onclick="callApi()">Call /api/hello</button>
+        <div id="apiResult" class="log-box"></div>
+    </div>
+
+    <!-- WEBSOCKET SECTION -->
+    <div class="section">
+        <h2>2. WebSocket Server</h2>
+        <p>Real-time echo chat.</p>
+        <div>
+            <input type="text" id="wsInput" placeholder="Type a message...">
+            <button onclick="sendMessage()">Send</button>
+        </div>
+        <div id="wsLog" class="log-box"></div>
+    </div>
+
+    <script>
+        // --- REST API LOGIC ---
+        async function callApi() {
+            const resultBox = document.getElementById('apiResult');
+            resultBox.innerHTML += `> Fetching...<br>`;
+            
+            try {
+                const response = await fetch('/api/hello?name=BrowserUser');
+                const text = await response.text();
+                resultBox.innerHTML += `<strong>Server:</strong> ${text}<br>`;
+            } catch (err) {
+                resultBox.innerHTML += `<span style="color:red">Error: ${err.message}</span><br>`;
+            }
+            resultBox.scrollTop = resultBox.scrollHeight;
+        }
+
+        // --- WEBSOCKET LOGIC ---
+        const logBox = document.getElementById('wsLog');
+        // Automatically determine if we need ws:// or wss:// based on current protocol
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${protocol}//${window.location.host}/ws`;
+        
+        let socket;
+
+        function connect() {
+            logBox.innerHTML += `> Connecting to ${wsUrl}...<br>`;
+            socket = new WebSocket(wsUrl);
+
+            socket.onopen = () => {
+                logBox.innerHTML += `<span style="color:green">Connected!</span><br>`;
+            };
+
+            socket.onmessage = (event) => {
+                logBox.innerHTML += `Received: ${event.data}<br>`;
+                logBox.scrollTop = logBox.scrollHeight;
+            };
+
+            socket.onclose = () => {
+                logBox.innerHTML += `<span style="color:orange">Disconnected. Reconnecting in 3s...</span><br>`;
+                setTimeout(connect, 3000);
+            };
+
+            socket.onerror = (err) => {
+                console.error("WebSocket error:", err);
+                logBox.innerHTML += `<span style="color:red">Error occurred. Check console.</span><br>`;
+            };
+        }
+
+        function sendMessage() {
+            const input = document.getElementById('wsInput');
+            if (input.value && socket && socket.readyState === WebSocket.OPEN) {
+                socket.send(input.value);
+                input.value = '';
+            } else {
+                alert("Socket not connected or input empty");
+            }
+        }
+
+        // Connect on load
+        connect();
+    </script>
+</body>
+</html>
