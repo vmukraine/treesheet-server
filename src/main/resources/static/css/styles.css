@@ -1,0 +1,98 @@
+body, html {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+.container {
+  display: flex;
+  flex-direction: row;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+}
+.sidebar {
+  width: 120px;
+  background: #f0f0f0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-right: 1px solid #ccc;
+  flex-shrink: 0;
+}
+.main-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+.topbar, .bottombar1 {
+  height: 50px;
+  background: #e0e0e0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 18px;
+  font-family: sans-serif;
+}
+.canvas-container {
+  flex: 1;
+  overflow: auto;
+  position: relative;
+  background: #fff;
+}
+canvas {
+  display: block;
+  background: #fff;
+  margin: 0;
+  position: absolute;
+  left: 0; top: 0;
+}
+.editable-box {
+  position: absolute;
+  border: 1px solid #888;
+  padding: 4px;
+  font-size: 16px;
+  background: #fafafa;
+  min-width: 100px;
+  min-height: 24px;
+  resize: none;
+}
+
+
+
+
+
+
+.bottombar {
+  height: 50px;
+  background: #e0e0e0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  flex-shrink: 0;
+  font-size: 18px;
+  font-family: sans-serif;
+  overflow-x: auto;
+  white-space: nowrap;
+  /* Hide scrollbar for Webkit browsers */
+  scrollbar-width: none; /* Firefox */
+}
+.bottombar::-webkit-scrollbar {
+  display: none;
+}
+.bottombar-content {
+  display: inline-block;
+}
+.bottombar-content button {
+  margin: 0 6px;
+  padding: 6px 16px;
+  font-size: 16px;
+  border-radius: 4px;
+  border: 1px solid #bbb;
+  background: #fff;
+  cursor: pointer;
+}

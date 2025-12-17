@@ -1,0 +1,1 @@
+Source of svg simple logo designs: https://simpleicons.org/

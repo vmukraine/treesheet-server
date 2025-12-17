@@ -1,103 +1,521 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Spring Boot All-in-One Demo</title>
-    <style>
-        body { font-family: sans-serif; max-width: 800px; margin: 2rem auto; padding: 0 1rem; line-height: 1.6; }
-        .section { border: 1px solid #ccc; padding: 1.5rem; border-radius: 8px; margin-bottom: 2rem; }
-        .log-box { background: #f4f4f4; border: 1px solid #ddd; height: 150px; overflow-y: scroll; padding: 10px; margin-top: 10px; font-family: monospace; }
-        button { cursor: pointer; padding: 8px 16px; background: #007bff; color: white; border: none; border-radius: 4px; }
-        button:hover { background: #0056b3; }
-        input { padding: 8px; width: 60%; }
-        h2 { margin-top: 0; }
-    </style>
+  <meta charset="UTF-8">
+
+  <meta name="treesheet-app-version" content="v0.24">
+  
+  <!--meta viewport: https://www.npmjs.com/package/@hint/hint-meta-viewport-->
+  <!--meta name="viewport" content="width=device-width, initial-scale=1.0"-->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#182034">
+  <link rel="icon" type="image/png" sizes="48x48" href="./images/favicon-48x48.ico">
+  
+  <title>TreeSheets Note App POC</title>
+  <!--link rel="stylesheet" href="css/styles.css"-->
+  
+  <!-- This lets it make as Android app (In Chrome browser menut, Add to Homepage, search on main screen new icon with this app) -->
+  <!--meta name="mobile-web-app-capable" content="yes" -->
+  <!-- better alternative is: Progressive Web App
+    https://addyosmani.com/blog/getting-started-with-progressive-web-apps/
+    https://developers.google.com/web/progressive-web-apps/
+    examples: https://github.com/hemanth/awesome-pwa?tab=readme-ov-file
+    calculator: https://calculator-app-tau.vercel.app/ https://github.com/soransh-singh/calculatorApp-FrontendMentor/blob/main/index.html
+  -->
+
+  <!-- PWA -->
+  <link rel="manifest" href="app.webmanifest">
+  <meta name="theme-color" content="#F47216"> <!-- Android: Chrome, Firefox OS and Opera -->
+  <meta name="apple-mobile-web-app-capable" content="yes"> <!-- iOS -->
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"> <!-- default, black, black-translucent (takes color from body:background-color) -->
+
+  
+  <!--
+    body {
+      //margin: 0;
+      //padding: 0;
+      //overflow: hidden;
+      height: 100%;
+      width: 100%;
+    }
+  -->
+  <style>
+    body {
+      height: 100%;
+      width: 100%;
+      margin: 0;
+    }
+    canvas {
+      display: block;
+      position: absolute;
+      top: 0; bottom: 0;
+      left: 0; right: 0;
+      width: 100%;
+      height: 100%;
+    }
+    dddcanvas {
+      width: 100%;
+      height: 100%;
+
+      display: block;
+      width: 100vw;
+      height: 100vh;
+    }
+    .editable-box {
+      position: absolute;
+      border: 1px solid #888;
+      padding: 4px;
+      font-size: 16px;
+      background: #fafafa;
+      min-width: 100px;
+      min-height: 24px;
+      resize: none;
+    }
+  </style>
 </head>
 <body>
-
-    <h1>Spring Boot: HTTPS, Static & WebSockets</h1>
-    <p>This page is being served statically by the Spring Boot application.</p>
-
-    <!-- REST API SECTION -->
-    <div class="section">
-        <h2>1. HTTPS REST API</h2>
-        <p>Call the internal API via HTTPS.</p>
-        <button onclick="callApi()">Call /api/hello</button>
-        <div id="apiResult" class="log-box"></div>
-    </div>
-
-    <!-- WEBSOCKET SECTION -->
-    <div class="section">
-        <h2>2. WebSocket Server</h2>
-        <p>Real-time echo chat.</p>
-        <div>
-            <input type="text" id="wsInput" placeholder="Type a message...">
-            <button onclick="sendMessage()">Send</button>
-        </div>
-        <div id="wsLog" class="log-box"></div>
-    </div>
-
-    <script>
-        // --- REST API LOGIC ---
-        async function callApi() {
-            const resultBox = document.getElementById('apiResult');
-            resultBox.innerHTML += `> Fetching...<br>`;
-            
-            try {
-                const response = await fetch('/api/hello?name=BrowserUser');
-                const text = await response.text();
-                resultBox.innerHTML += `<strong>Server:</strong> ${text}<br>`;
-            } catch (err) {
-                resultBox.innerHTML += `<span style="color:red">Error: ${err.message}</span><br>`;
-            }
-            resultBox.scrollTop = resultBox.scrollHeight;
-        }
-
-        // --- WEBSOCKET LOGIC ---
-        const logBox = document.getElementById('wsLog');
-        // Automatically determine if we need ws:// or wss:// based on current protocol
-        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const wsUrl = `${protocol}//${window.location.host}/ws`;
+  <canvas id="fullscreenCanvas"></canvas>
+  <textarea id="editableBox" class="editable-box" style="display:none;"></textarea>
+  <script src="https://unpkg.com/web-vitals@3/dist/web-vitals.iife.js"></script>
+  <script type="text/javascript" src="js/util.js"></script>
+  <script type="text/javascript" src="js/pwa.js"></script>
+  <script type="text/javascript" src="js/render.js"></script>
+  <script>
+    if (false) {
+      // imported via https://unpkg.com/web-vitals@3/dist/web-vitals.iife.js
+      // Access the functions from the global 'webVitals' object
+      const { onLCP, onFID, onCLS, onINP } = webVitals;
+      // Call the functions to report the metrics
+      onLCP(console.log);
+      onFID(console.log);
+      onCLS(console.log);
+      onINP(console.log);
+    }
+  
+    let averageFPS = 0;
+    if (true) {
+      // track FPS
+      (function() {
+        let frameCount = 0;
+        let lastLogTime = performance.now();
+        let storedAverageFPS = 0;
         
-        let socket;
-
-        function connect() {
-            logBox.innerHTML += `> Connecting to ${wsUrl}...<br>`;
-            socket = new WebSocket(wsUrl);
-
-            socket.onopen = () => {
-                logBox.innerHTML += `<span style="color:green">Connected!</span><br>`;
-            };
-
-            socket.onmessage = (event) => {
-                logBox.innerHTML += `Received: ${event.data}<br>`;
-                logBox.scrollTop = logBox.scrollHeight;
-            };
-
-            socket.onclose = () => {
-                logBox.innerHTML += `<span style="color:orange">Disconnected. Reconnecting in 3s...</span><br>`;
-                setTimeout(connect, 3000);
-            };
-
-            socket.onerror = (err) => {
-                console.error("WebSocket error:", err);
-                logBox.innerHTML += `<span style="color:red">Error occurred. Check console.</span><br>`;
-            };
+        // 1. The render loop: This function runs on every frame
+        function animationLoop() {
+          frameCount++; // Increment the frame counter
+          if (averageFPS !== storedAverageFPS) {
+            storedAverageFPS = averageFPS;
+            fpsLabel = "FPS: " + averageFPS;
+            draw();
+          }
+          requestAnimationFrame(animationLoop); // Request the next frame
         }
 
-        function sendMessage() {
-            const input = document.getElementById('wsInput');
-            if (input.value && socket && socket.readyState === WebSocket.OPEN) {
-                socket.send(input.value);
-                input.value = '';
-            } else {
-                alert("Socket not connected or input empty");
+        // 2. The 5-second logger
+        setInterval(() => {
+          const currentTime = performance.now();
+          const timeElapsed = currentTime - lastLogTime; // Time elapsed in ms
+          
+          // Calculate average FPS over the elapsed time
+          averageFPS = ((frameCount * 1000) / timeElapsed).toFixed(1);
+
+          //console.log(`Average FPS (last 5s): ${averageFPS}`);
+
+          // Reset for the next 5-second interval
+          frameCount = 0;
+          lastLogTime = currentTime;
+          
+        }, 1000); // Run every 5000 milliseconds (5 seconds)
+
+        // Start the frame-counting loop
+        requestAnimationFrame(animationLoop);
+      })();
+    }
+    
+    const logHistory = []; const LOG_HISTORY_MAX_SIZE = 23; const LOG_HOSTORY_ENTRY_MAX_LENGTH = 200;
+    if (true) {
+      // capture logs
+      const originalConsoleLog = console.log;
+      const originalConsoleTrace = console.trace;
+      const originalConsoleDebug = console.debug;
+      const originalConsoleInfo = console.info;
+      const originalConsoleWarn = console.warn;
+      const originalConsoleError = console.error;
+      
+      const pushLogEntryFn = function(...args) {
+        // Convert arguments to a readable string (optional, but helpful)
+        const logMessage = args.map(arg => {
+            if (typeof arg === 'object' && arg !== null) {
+                try {
+                    // Safely convert objects to JSON string
+                    return JSON.stringify(arg);
+                } catch (e) {
+                    // Fallback for circular references
+                    return String(arg); 
+                }
             }
+            return String(arg);
+        }).join(' ');
+        
+        // Save the message, timestamp, and type to the global history
+        const logMsg = `${new Date().toTimeString().substring(0,8)} ${logMessage.substring(0,LOG_HOSTORY_ENTRY_MAX_LENGTH)}`;
+        logHistory.push(logMsg);
+        
+        if (logHistory.length > LOG_HISTORY_MAX_SIZE) {
+          logHistory.shift();
         }
+      };
+      /**
+       * Custom function that overrides console.log
+       * @param {...any} args - The arguments passed to console.log
+       */
+      console.log = function(...args) {
+        pushLogEntryFn(args);
+        // Execute the original console.log function so the message still appears in the DevTools console
+        originalConsoleLog.apply(console, args);
+      };
+      console.trace = function(...args) {
+        pushLogEntryFn(args);
+        originalConsoleTrace.apply(console, args);
+      };
+      console.debug = function(...args) {
+        pushLogEntryFn(args);
+        originalConsoleDebug.apply(console, args);
+      };
+      console.info = function(...args) {
+        pushLogEntryFn(args);
+        originalConsoleInfo.apply(console, args);
+      };
+      console.warn = function(...args) {
+        pushLogEntryFn(args);
+        originalConsoleWarn.apply(console, args);
+      };
+      console.error = function(...args) {
+        pushLogEntryFn(args);
+        originalConsoleError.apply(console, args);
+      };
+    }
+  
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('js/service-worker.js');
+    }
+    pwaUtil.requestNotificationPermission();
+  
+    const ResizeSolution = "WINDOW_RESIZER"; // WINDOW_RESIZER | RESIZE_OBSERVER
 
-        // Connect on load
-        connect();
-    </script>
+    var possibleContexts = ['bitmaprenderer', '2d', 'webgl', 'webgl2', 'experimental-webgl', 'experimental-webgl2', 'dummy'];
+    var availableContexts = possibleContexts.filter(function(c) {
+      var canvas = document.createElement('canvas');
+      if (canvas.getContext(c)) { return c; }
+    });
+  
+    //alert('available contexts: ' + availableContexts);
+  
+    const canvas = document.getElementById('fullscreenCanvas');
+    const ctx = canvas.getContext('2d');
+    const editableBox = document.getElementById('editableBox');
+    
+    const circles = [
+      {x:70,y:100,r:30,c:'green'},
+      {x:140,y:100,r:30,c:'red'},
+      {x:210,y:100,r:30,c:'yellow'},
+      {x:280,y:100,r:30,c:'pink'},
+      {x:90,y:30,r:20,c:'black'},
+      {x:140,y:180,r:30,c:'blue'}
+    ];
+    
+    let textLabel1 = "<empty>";
+    let fpsLabel = "";
+    
+    let isScrolling = false;
+    let scrollLeft=0, scrollTop=0;
+    let touchStartX=0, touchStartY=0;
+    let scrollLeftStart=0, scrollTopStart=0;
+    
+    let isMultiTouchResizing = false;
+    let multiTouchResizingStartDistance = 0;
+    let multiTouchResizingStartZoomScale = 1;
+    
+    const imgPumpkin = new Image(); imgPumpkin.src = 'images/pumpkin.png';
+    let imgPupkinLoaded = false; imgPumpkin.onload = () => { imgPupkinLoaded=true; };
+    // Example drawing
+    function draw() {
+
+      ctx.save();
+      ctx.fillStyle = 'white';//'skyblue';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      
+      if (imgPupkinLoaded) {
+        const w = imgPumpkin.width * editorInfo.zoomScale;
+        const h = imgPumpkin.height * editorInfo.zoomScale;
+        ctx.drawImage(imgPumpkin, 100, 300, w, h);
+      }
+      
+      // line
+      /*ctx.strokeStyle = "grey";//"#0077cc";
+      ctx.lineWidth = 0.5;
+      //ctx.beginPath();
+      //ctx.moveTo(100, 100);
+      //ctx.lineTo(400, 200);
+      //ctx.closePath();
+      //ctx.stroke();
+      ctx.strokeRect(5, 5, canvas.width - 10, canvas.height - 10);*/
+      
+      ctx.restore();
+      
+      renderer.render(canvas, ctx, scrollLeft, scrollTop);
+
+      // text
+      ctx.save();
+      ctx.font = '16px sans-serif';
+      ctx.fillStyle = '#000';
+      const treesheetAppVersion = document.querySelector('meta[name="treesheet-app-version"]').content;
+      ctx.fillText(treesheetAppVersion, canvas.width-108, 180);
+      ctx.fillText(`dpx:${devicePixelRatio}`, canvas.width-108, 195);
+      ctx.restore();
+      
+      // circles
+      ctx.save();
+      for (var i = 0; i < circles.length; i++) {
+        const c = circles[i];
+        ctx.fillStyle = c.c;
+        ctx.beginPath();
+        ctx.arc(c.x, c.y, c.r, 0, 2 * Math.PI);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = '#333';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
+      ctx.restore();
+
+      ctx.save();
+      ctx.font = '16px sans-serif';
+      ctx.fillStyle = '#000';
+      ctx.fillText(textLabel1, 70, canvas.height - 50);
+      ctxUtil.drawTextWithBackground(ctx, fpsLabel, 70, canvas.height - 30, '16px sans-serif');
+      
+      if (true) {
+        // draw logs
+        ctx.font = '16px sans-serif';
+        ctx.fillStyle = '#000';
+        for (let i = 0; i < logHistory.length; i++) {
+          const msg = logHistory[logHistory.length - 1 - i];
+          ctx.fillText(msg, canvas.width - 600, canvas.height - 30 - i*20);
+        }
+      }
+      ctx.restore();
+    }
+
+    function resizeCanvas() {
+      //alert('aserser');
+      //canvas.width = window.innerWidth;
+      //canvas.height = window.innerHeight;
+      
+      // Get the device pixel ratio, falling back to 1.
+      var dpr = devicePixelRatio;
+      // Get the size of the canvas in CSS pixels.
+      var rect = canvas.getBoundingClientRect();
+      // Give the canvas pixel dimensions of their CSS
+      // size * the device pixel ratio.
+      canvas.width = rect.width * devicePixelRatio;
+      canvas.height = rect.height * devicePixelRatio;
+      var ctx = canvas.getContext('2d');
+      // Scale all drawing operations by the dpr, so you
+      // don't have to worry about the difference.
+      //ctx.scale(dpr, dpr);
+
+      draw();
+    }
+    
+    function showEditableBox() {
+      //const editableBox = document.getElementById('editableBox');
+      editableBox.style.display = 'block';
+      editableBox.style.left = '20px';
+      editableBox.style.top = '200px';
+      editableBox.style.width = '200px';
+      editableBox.style.height = '30px';
+      editableBox.value = "Simple text here";
+    }
+    
+    function hideEditableBox() {
+      //const editableBox = document.getElementById('editableBox');
+      editableBox.style.display = 'none';
+    }
+    
+    async function onCanvasMouseDown(e) {
+      const rect = canvas.getBoundingClientRect();
+      const mx = e.clientX*devicePixelRatio - rect.left;
+      const my = e.clientY*devicePixelRatio - rect.top;
+      //alert('x: ' + mx + ', y: ' + my);
+      let circleClicked = false;
+      for (var i = 0; i < circles.length; i++) {
+        const c = circles[i];
+        const dx = mx - c.x;
+        const dy = my - c.y;
+        if (dx*dx + dy*dy <= c.r*c.r) {
+          circleClicked = true;
+          // handler for circle #i
+          if (i === 0) {
+            // clicked on green circle
+            showEditableBox();
+          } else if (i === 1) {
+            // clicked on red circle
+            hideEditableBox();
+          } else if (i === 2) {
+            // https://developer.mozilla.org/en-US/docs/Web/API/Clipboard
+            const data = new Blob(["TT[778]MM[77]|This is app specific version" + Math.random()], { type: 'text/html' });
+            const item = new ClipboardItem({'text/html': data, 'text/plain': 'jkhlasdjkfhsdlfsdfh' + Math.random()});
+            /*const clipboardItemData = {
+              ["ttt/mywebnotesapp"]: "TT[778]MM[77]|This is app specific version",
+              [type]: "This is simple text version"
+            };*/
+            await navigator.clipboard.write([item]);
+            /*navigator.clipboard.writeText("Dummy text to copy to cpbrd").then(() => {
+            }).catch(err => {
+              alert("failed to copy: " + err);
+            });*/
+          } else if (i === 3) {
+            const clipboardContents = await navigator.clipboard.read(['text/html']); // to prevent sanitization
+            for (const item of clipboardContents) {
+              for (const mimeType of item.types) {
+                if (mimeType === 'text/html') {
+                  const blob = item.getType('text/html');
+                  blob.then((b) => {
+                    for (let key in b) {
+                      console.log(`${key}: ${b[key]}`);
+                    }
+                    //console.log(b.arrayBuffer());
+                    b.text().then((t) => { textLabel1 = t; draw(); } );
+                  });
+                  /*showEditableBox();
+                  const editableBox = document.getElementById('editableBox');
+                  editableBox.value = blob;*/
+                }
+              }
+            }
+          } else if (i === 4) {
+            window.close();
+          } else if (i === 5) {
+            pwaUtil.sendTestPictureNotification();
+          }
+        }
+      }
+      if (!circleClicked) {
+        // start scrolling
+        isScrolling = true;
+        touchStartX = mx; touchStartY = my;
+        scrollLeftStart = scrollLeft; scrollTopStart = scrollTop;
+      }
+    }
+    
+    function onCanvasTouchStart(e) {
+      const tc = e.touches.length;
+      if (tc === 1) {
+        const touch = e.touches[0];
+        onCanvasMouseDown(touch);
+      } else if (tc === 2) {
+        isMultiTouchResizing = true;
+        const touch1 = e.touches[0];
+        const touch2 = e.touches[1];
+        const deltaX = Math.abs(touch2.clientX - touch1.clientX);
+        const deltaY = Math.abs(touch2.clientY - touch1.clientY);
+        multiTouchResizingStartDistance = Math.sqrt(deltaX*deltaX + deltaY*deltaY);
+        multiTouchResizingStartZoomScale = editorInfo.zoomScale;
+        textLabel1 = "resizing: " + multiTouchResizingStartDistance;
+        draw();
+      }
+    }
+    
+    function onCanvasTouchMove(e) {
+      const tc = e.touches.length;
+      if (isScrolling && tc === 1) {
+        e.preventDefault();
+        const touch = e.touches[0];
+
+        const rect = canvas.getBoundingClientRect();
+        const mx = touch.clientX*devicePixelRatio - rect.left;
+        const my = touch.clientY*devicePixelRatio - rect.top;
+
+        scrollLeft = scrollLeftStart + touchStartX - mx;
+        scrollTop = scrollTopStart + touchStartY - my;
+        //console.log(`mx: ${mx}`);
+        draw();
+      } else if (isMultiTouchResizing && tc === 2) {
+        const touch1 = e.touches[0];
+        const touch2 = e.touches[1];
+        const deltaX = Math.abs(touch2.clientX - touch1.clientX);
+        const deltaY = Math.abs(touch2.clientY - touch1.clientY);
+        const newDistance = Math.sqrt(deltaX*deltaX + deltaY*deltaY);
+        const deltaDistance = newDistance - multiTouchResizingStartDistance;
+        const change = newDistance / multiTouchResizingStartDistance;
+        editorInfo.zoomScale = multiTouchResizingStartZoomScale * change;
+        textLabel1 = "resizing: " + multiTouchResizingStartDistance + "; delta: " + deltaDistance + "; change: " + change;
+        draw();
+      }
+    }
+
+    function onCanvasTouchEnd(e) {
+      if (isScrolling) {
+        isScrolling = false;
+      } else if (isMultiTouchResizing) {
+        isMultiTouchResizing = false;
+        textLabel1 = "touchend";
+        draw();
+      }
+    }
+
+    function onCanvasTouchCancel(e) {
+      if (isScrolling) {
+        isScrolling = false;
+      } else if (isMultiTouchResizing) {
+        isMultiTouchResizing = false;
+        textLabel1 = "touchcanceled";
+        draw();
+      }
+    }
+
+    
+    function onEditableBoxInput() {
+      editableBox.style.height = 'auto';
+      editableBox.style.height = Math.min(editableBox.scrollHeight, 60) + 'px';
+    }
+    
+    
+    window.addEventListener("load", ()=>{
+      canvas.addEventListener('mousedown', onCanvasMouseDown);
+      canvas.addEventListener('touchstart', onCanvasTouchStart, {passive: false});
+      canvas.addEventListener('touchmove', onCanvasTouchMove, {passive: false});
+      canvas.addEventListener('touchend', onCanvasTouchEnd, {passive: false});
+      canvas.addEventListener('touchcancel', onCanvasTouchCancel, {passive: false});
+
+      editableBox.addEventListener('input', onEditableBoxInput);
+
+      if (ResizeSolution === "WINDOW_RESIZER") {
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+      } else if (ResizeSolution === "RESIZE_OBSERVER") {
+        const observer = new ResizeObserver((entries) => {
+          const entry = entries.find((entry) => entry.target === canvas);
+          canvas.width = entry.devicePixelContentBoxSize[0].inlineSize * 2;
+          canvas.height = entry.devicePixelContentBoxSize[0].blockSize * 2;
+          /* … render to canvas … */
+          draw();
+        });
+        observer.observe(canvas, {box: ['device-pixel-content-box']});
+      }
+
+      
+      if ("serviceWorker" in navigator) {
+        navigator.serviceWorker
+          .register("js/service-worker.js")
+          .then((registration) => console.log("Service worker registered"))
+          .catch((error) => console.log("Service worker registration failed!", error));
+      }
+      
+    });
+    
+  </script>
+  <!--script type="text/javascript" src="js/main.js"></script-->
 </body>
 </html>
