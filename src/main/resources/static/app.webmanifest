@@ -1,0 +1,42 @@
+{
+  "name": "Tree Calculation Spreadsheets",
+  "short_name": "TreeSheets",
+  "description": "A primitive tree spreadsheet to act as notes app for now",
+  "start_url": "/",
+  "display": "standalone",
+  "scope": "/",
+  "background_color": "#F47216",
+  "theme_color": "#F47216",
+
+  "icons": [
+    {
+      "src": "manifest-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "manifest-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+
+  "screenshots": [
+    {
+      "src": "screenshot/phone-ss-1.png",
+      "sizes": "336x729",
+      "type": "image/png"
+    },
+    {
+      "src": "screenshot/phone-ss-2.png",
+      "sizes": "336x729",
+      "type": "image/png"
+    },
+    {
+      "src": "screenshot/phone-ss-3.png",
+      "sizes": "336x729",
+      "type": "image/png"
+    }
+  ]
+}
